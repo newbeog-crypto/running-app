@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bold forward-leaning athletic pulse & stride mark inside 66dp safe zone (21..87) -->
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M58,28 C61.5,28 64.5,30.9 64.5,34.5 C64.5,38.1 61.5,41 58,41 C54.4,41 51.5,38.1 51.5,34.5 C51.5,30.9 54.4,28 58,28 Z" />
+    <path
+        android:fillColor="#A3E635"
+        android:pathData="M34,63 L45.5,45.5 C47.1,43.1 49.9,41.8 52.8,42.3 L63.5,44.2 L71.5,36.5 C72.9,35.1 75.2,35.2 76.5,36.7 C77.8,38.2 77.6,40.4 76.1,41.7 L66.3,50.8 C65.1,51.9 63.4,52.3 61.8,51.9 L55.8,50.5 L50.4,58.6 L62.5,64.2 C64.4,65.1 65.5,67.2 65.1,69.3 L62.7,80.4 C62.3,82.4 60.4,83.7 58.4,83.3 C56.4,82.9 55.1,81.0 55.5,79.0 L57.4,70.2 L44.3,64.1 L38.5,74.2 C37.5,75.9 35.3,76.5 33.6,75.5 C31.9,74.5 31.3,72.3 32.3,70.6 L39.5,58.1 L34,63 Z" />
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M27,51 L38,51 C39.4,51 40.5,52.1 40.5,53.5 C40.5,54.9 39.4,56 38,56 L27,56 C25.6,56 24.5,54.9 24.5,53.5 C24.5,52.1 25.6,51 27,51 Z" />
+    <path
+        android:fillColor="#A3E635"
+        android:pathData="M29,42 L41,42 C42.4,42 43.5,43.1 43.5,44.5 C43.5,45.9 42.4,47 41,47 L29,47 C27.6,47 26.5,45.9 26.5,44.5 C26.5,43.1 27.6,42 29,42 Z" />
+</vector>

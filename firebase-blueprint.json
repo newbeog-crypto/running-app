@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "UserPrivateProfile": {
+      "title": "UserPrivateProfile",
+      "description": "Private user account settings and PII isolated to the authenticated owner.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "email": { "type": "string", "description": "Google account email (private to owner)." },
+        "username": { "type": "string", "description": "Unique display nickname." },
+        "usernameLower": { "type": "string", "description": "Normalized lowercase nickname key." },
+        "dailyStepGoal": { "type": "integer", "description": "Daily step target (1000..50000)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "dailyStepGoal", "createdAt", "updatedAt"]
+    },
+    "UsernameReservation": {
+      "title": "UsernameReservation",
+      "description": "Atomic unique nickname registry keyed by normalized lowercase username.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID owning this nickname." },
+        "username": { "type": "string", "description": "Original display nickname casing." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on reservation." }
+      },
+      "required": ["userId", "username", "createdAt"]
+    },
+    "PublicRunnerProfile": {
+      "title": "PublicRunnerProfile",
+      "description": "PII-free runner summary used for global/period rankings and friend comparisons.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID." },
+        "username": { "type": "string", "description": "Unique display nickname." },
+        "usernameLower": { "type": "string", "description": "Normalized lowercase nickname." },
+        "leaderboardVisible": { "type": "boolean", "description": "Visibility flag for ranking queries." },
+        "totalDistanceMeters": { "type": "number", "description": "All-time running and walking distance in meters." },
+        "weeklyDistanceMeters": { "type": "number", "description": "Current week distance in meters." },
+        "monthlyDistanceMeters": { "type": "number", "description": "Current month distance in meters." },
+        "yearlyDistanceMeters": { "type": "number", "description": "Current year distance in meters." },
+        "totalWorkouts": { "type": "integer", "description": "All-time saved workouts count." },
+        "weeklyWorkouts": { "type": "integer", "description": "Current week workouts count." },
+        "monthlyWorkouts": { "type": "integer", "description": "Current month workouts count." },
+        "yearlyWorkouts": { "type": "integer", "description": "Current year workouts count." },
+        "totalMovingTimeMillis": { "type": "integer", "description": "Total active moving time in milliseconds." },
+        "averagePaceSecPerKm": { "type": "integer", "description": "Overall average pace in seconds per km." },
+        "bestPaceSecPerKm": { "type": "integer", "description": "Fastest recorded pace in seconds per km." },
+        "totalSteps": { "type": "integer", "description": "Total synced steps." },
+        "weekKey": { "type": "string", "description": "Current ISO week key (yyyy-Www)." },
+        "monthKey": { "type": "string", "description": "Current month key (yyyy-MM)." },
+        "yearKey": { "type": "string", "description": "Current year key (yyyy)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId", "username", "usernameLower", "leaderboardVisible",
+        "totalDistanceMeters", "weeklyDistanceMeters", "monthlyDistanceMeters", "yearlyDistanceMeters",
+        "totalWorkouts", "weeklyWorkouts", "monthlyWorkouts", "yearlyWorkouts",
+        "totalMovingTimeMillis", "averagePaceSecPerKm", "bestPaceSecPerKm", "totalSteps",
+        "weekKey", "monthKey", "yearKey", "createdAt", "updatedAt"
+      ]
+    },
+    "CloudWorkoutSession": {
+      "title": "CloudWorkoutSession",
+      "description": "Recorded GPS run or walk session synced per user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "type": { "type": "string", "enum": ["RUN", "WALK"], "description": "Workout type." },
+        "startedAtMillis": { "type": "integer", "description": "Epoch start timestamp in ms." },
+        "endedAtMillis": { "type": "integer", "description": "Epoch end timestamp in ms." },
+        "movingTimeMillis": { "type": "integer", "description": "Active moving time in ms." },
+        "distanceMeters": { "type": "number", "description": "Total GPS distance in meters." },
+        "averagePaceSecPerKm": { "type": "integer", "description": "Average pace in sec/km." },
+        "caloriesBurned": { "type": "integer", "description": "Estimated kcal burned." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId", "type", "startedAtMillis", "endedAtMillis", "movingTimeMillis",
+        "distanceMeters", "averagePaceSecPerKm", "caloriesBurned",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "CloudDailySteps": {
+      "title": "CloudDailySteps",
+      "description": "Daily step count and step goal synced per date key.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "dateKey": { "type": "string", "description": "Date key yyyy-MM-dd." },
+        "steps": { "type": "integer", "description": "Total steps on that day." },
+        "goalSteps": { "type": "integer", "description": "Step goal for that day." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "dateKey", "steps", "goalSteps", "createdAt", "updatedAt"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "Mutual friendship and pending request link between two runners.",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string", "description": "Sender UID." },
+        "fromUsername": { "type": "string", "description": "Sender nickname." },
+        "toUid": { "type": "string", "description": "Recipient UID." },
+        "toUsername": { "type": "string", "description": "Recipient nickname." },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED"], "description": "Request state." },
+        "memberUids": { "type": "array", "description": "Two-element list [fromUid, toUid]." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["fromUid", "fromUsername", "toUid", "toUsername", "status", "memberUids", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivateProfile" },
+      "description": "Private user account profile isolated to owner."
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": { "$ref": "#/entities/CloudWorkoutSession" },
+      "description": "User's synced walking and running sessions."
+    },
+    "/users/{userId}/dailySteps/{dateKey}": {
+      "schema": { "$ref": "#/entities/CloudDailySteps" },
+      "description": "User's synced daily step totals."
+    },
+    "/usernames/{usernameKey}": {
+      "schema": { "$ref": "#/entities/UsernameReservation" },
+      "description": "Unique nickname reservation index."
+    },
+    "/public_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/PublicRunnerProfile" },
+      "description": "PII-free runner summary for rankings and friend stats."
+    },
+    "/friend_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/FriendRequest" },
+      "description": "Friend requests and accepted friendships."
+    }
+  }
+}

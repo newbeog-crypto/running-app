@@ -1,0 +1,334 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUsernameKey(key) {
+      return key is string &&
+             key.size() >= 2 &&
+             key.size() <= 24 &&
+             key != '.' &&
+             key != '..' &&
+             !key.matches('.*[/\\s].*');
+    }
+
+    // --- VALIDATION HELPERS ---
+
+    function isValidPrivateUser(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+             (!('username' in data) || (data.username is string && data.username.size() >= 2 && data.username.size() <= 24)) &&
+             (!('usernameLower' in data) || isValidUsernameKey(data.usernameLower)) &&
+             data.dailyStepGoal is int &&
+             data.dailyStepGoal >= 1000 &&
+             data.dailyStepGoal <= 50000 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidUsernameReservation(data, usernameKey) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.username is string &&
+             data.username.size() >= 2 &&
+             data.username.size() <= 24 &&
+             isValidUsernameKey(usernameKey) &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time;
+    }
+
+    function isValidPublicProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.username is string &&
+             data.username.size() >= 2 &&
+             data.username.size() <= 24 &&
+             isValidUsernameKey(data.usernameLower) &&
+             data.leaderboardVisible is bool &&
+             data.leaderboardVisible == true &&
+             data.totalDistanceMeters is number &&
+             data.totalDistanceMeters >= 0 &&
+             data.weeklyDistanceMeters is number &&
+             data.weeklyDistanceMeters >= 0 &&
+             data.monthlyDistanceMeters is number &&
+             data.monthlyDistanceMeters >= 0 &&
+             data.yearlyDistanceMeters is number &&
+             data.yearlyDistanceMeters >= 0 &&
+             data.totalWorkouts is int &&
+             data.totalWorkouts >= 0 &&
+             data.weeklyWorkouts is int &&
+             data.weeklyWorkouts >= 0 &&
+             data.monthlyWorkouts is int &&
+             data.monthlyWorkouts >= 0 &&
+             data.yearlyWorkouts is int &&
+             data.yearlyWorkouts >= 0 &&
+             data.totalMovingTimeMillis is int &&
+             data.totalMovingTimeMillis >= 0 &&
+             data.averagePaceSecPerKm is int &&
+             data.averagePaceSecPerKm >= 0 &&
+             data.bestPaceSecPerKm is int &&
+             data.bestPaceSecPerKm >= 0 &&
+             data.totalSteps is int &&
+             data.totalSteps >= 0 &&
+             data.weekKey is string &&
+             data.weekKey.size() >= 4 &&
+             data.weekKey.size() <= 16 &&
+             data.monthKey is string &&
+             data.monthKey.size() >= 4 &&
+             data.monthKey.size() <= 16 &&
+             data.yearKey is string &&
+             data.yearKey.size() == 4 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidWorkout(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.type in ['RUN', 'WALK'] &&
+             data.startedAtMillis is int &&
+             data.startedAtMillis >= 0 &&
+             data.endedAtMillis is int &&
+             data.endedAtMillis >= data.startedAtMillis &&
+             data.movingTimeMillis is int &&
+             data.movingTimeMillis >= 0 &&
+             data.distanceMeters is number &&
+             data.distanceMeters >= 0 &&
+             data.distanceMeters <= 1000000 &&
+             data.averagePaceSecPerKm is int &&
+             data.averagePaceSecPerKm >= 0 &&
+             data.averagePaceSecPerKm <= 7200 &&
+             data.caloriesBurned is int &&
+             data.caloriesBurned >= 0 &&
+             data.caloriesBurned <= 50000 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidDailySteps(data, userId, dateKey) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.dateKey is string &&
+             data.dateKey == dateKey &&
+             data.dateKey.size() == 10 &&
+             data.steps is int &&
+             data.steps >= 0 &&
+             data.steps <= 500000 &&
+             data.goalSteps is int &&
+             data.goalSteps >= 1000 &&
+             data.goalSteps <= 50000 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidFriendRequest(data) {
+      return data.fromUid is string &&
+             isValidId(data.fromUid) &&
+             data.fromUsername is string &&
+             data.fromUsername.size() >= 2 &&
+             data.fromUsername.size() <= 24 &&
+             data.toUid is string &&
+             isValidId(data.toUid) &&
+             data.fromUid != data.toUid &&
+             data.toUsername is string &&
+             data.toUsername.size() >= 2 &&
+             data.toUsername.size() <= 24 &&
+             data.status in ['PENDING', 'ACCEPTED'] &&
+             data.memberUids is list &&
+             data.memberUids.size() == 2 &&
+             data.fromUid in data.memberUids &&
+             data.toUid in data.memberUids &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    // --- COLLECTIONS ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll(['userId', 'dailyStepGoal', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'email', 'username', 'usernameLower', 'dailyStepGoal', 'createdAt', 'updatedAt']) &&
+                       isValidPrivateUser(incoming(), userId);
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidPrivateUser(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['email', 'username', 'usernameLower', 'dailyStepGoal', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /workouts/{workoutId} {
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow get: if isSignedIn() && isValidId(workoutId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(workoutId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'type', 'startedAtMillis', 'endedAtMillis', 'movingTimeMillis', 'distanceMeters', 'averagePaceSecPerKm', 'caloriesBurned', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'type', 'startedAtMillis', 'endedAtMillis', 'movingTimeMillis', 'distanceMeters', 'averagePaceSecPerKm', 'caloriesBurned', 'createdAt', 'updatedAt']) &&
+                         isValidWorkout(incoming(), userId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(workoutId) &&
+                         request.auth.uid == userId &&
+                         isValidWorkout(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['type', 'startedAtMillis', 'endedAtMillis', 'movingTimeMillis', 'distanceMeters', 'averagePaceSecPerKm', 'caloriesBurned', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(workoutId) && request.auth.uid == userId;
+      }
+
+      match /dailySteps/{dateKey} {
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow get: if isSignedIn() && isValidId(dateKey) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(dateKey) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll(['userId', 'dateKey', 'steps', 'goalSteps', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'dateKey', 'steps', 'goalSteps', 'createdAt', 'updatedAt']) &&
+                         isValidDailySteps(incoming(), userId, dateKey);
+
+        allow update: if isSignedIn() &&
+                         isValidId(dateKey) &&
+                         request.auth.uid == userId &&
+                         isValidDailySteps(incoming(), userId, dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['steps', 'goalSteps', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(dateKey) && request.auth.uid == userId;
+      }
+    }
+
+    match /usernames/{usernameKey} {
+      allow get: if isSignedIn() && isValidUsernameKey(usernameKey);
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidUsernameKey(usernameKey) &&
+                       incoming().keys().hasAll(['userId', 'username', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'username', 'createdAt']) &&
+                       isValidUsernameReservation(incoming(), usernameKey);
+
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidUsernameKey(usernameKey) && existing().userId == request.auth.uid;
+    }
+
+    match /public_profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn() && resource.data.leaderboardVisible == true && request.query.limit <= 50;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'username', 'usernameLower', 'leaderboardVisible',
+                         'totalDistanceMeters', 'weeklyDistanceMeters', 'monthlyDistanceMeters', 'yearlyDistanceMeters',
+                         'totalWorkouts', 'weeklyWorkouts', 'monthlyWorkouts', 'yearlyWorkouts',
+                         'totalMovingTimeMillis', 'averagePaceSecPerKm', 'bestPaceSecPerKm', 'totalSteps',
+                         'weekKey', 'monthKey', 'yearKey', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'username', 'usernameLower', 'leaderboardVisible',
+                         'totalDistanceMeters', 'weeklyDistanceMeters', 'monthlyDistanceMeters', 'yearlyDistanceMeters',
+                         'totalWorkouts', 'weeklyWorkouts', 'monthlyWorkouts', 'yearlyWorkouts',
+                         'totalMovingTimeMillis', 'averagePaceSecPerKm', 'bestPaceSecPerKm', 'totalSteps',
+                         'weekKey', 'monthKey', 'yearKey', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPublicProfile(incoming(), userId) &&
+                       existsAfter(/databases/$(database)/documents/usernames/$(incoming().usernameLower)) &&
+                       getAfter(/databases/$(database)/documents/usernames/$(incoming().usernameLower)).data.userId == request.auth.uid;
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidPublicProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'username', 'usernameLower', 'leaderboardVisible',
+                         'totalDistanceMeters', 'weeklyDistanceMeters', 'monthlyDistanceMeters', 'yearlyDistanceMeters',
+                         'totalWorkouts', 'weeklyWorkouts', 'monthlyWorkouts', 'yearlyWorkouts',
+                         'totalMovingTimeMillis', 'averagePaceSecPerKm', 'bestPaceSecPerKm', 'totalSteps',
+                         'weekKey', 'monthKey', 'yearKey', 'updatedAt'
+                       ]) &&
+                       existsAfter(/databases/$(database)/documents/usernames/$(incoming().usernameLower)) &&
+                       getAfter(/databases/$(database)/documents/usernames/$(incoming().usernameLower)).data.userId == request.auth.uid;
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /friend_requests/{requestId} {
+      allow list: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      allow get: if isSignedIn() && isValidId(requestId) && request.auth.uid in resource.data.memberUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().keys().hasAll(['fromUid', 'fromUsername', 'toUid', 'toUsername', 'status', 'memberUids', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['fromUid', 'fromUsername', 'toUid', 'toUsername', 'status', 'memberUids', 'createdAt', 'updatedAt']) &&
+                       isValidFriendRequest(incoming()) &&
+                       incoming().fromUid == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       exists(/databases/$(database)/documents/public_profiles/$(incoming().toUid));
+
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       isValidFriendRequest(incoming()) &&
+                       request.auth.uid == existing().toUid &&
+                       existing().status == 'PENDING' &&
+                       incoming().status == 'ACCEPTED' &&
+                       incoming().fromUid == existing().fromUid &&
+                       incoming().toUid == existing().toUid &&
+                       incoming().fromUsername == existing().fromUsername &&
+                       incoming().toUsername == existing().toUsername &&
+                       incoming().memberUids == existing().memberUids &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(requestId) && request.auth.uid in existing().memberUids;
+    }
+  }
+}

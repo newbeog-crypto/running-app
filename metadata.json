@@ -1,0 +1,6 @@
+{
+  "name": "StridePulse",
+  "description": "Native walking and running tracker with live step counter, GPS route tracking, and local workout history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
